@@ -7,80 +7,84 @@ Created on Mon Jul 12 23:03:31 2021
 
 import cv2
 import imutils
+import queue
 import non_max_suppression as NMS
 import numpy as np
 
 # Window name in which image is displayed
 window_name = 'Image'
-  
-# text
-text = 'GeeksforGeeks'
-  
+
 # font
 font = cv2.FONT_HERSHEY_SIMPLEX
-  
-# fontScale
-fontScale = 0.8
-   
-# Red color in BGR
-color = (0, 0, 255)
-  
-# Line thickness of 2 px
-thickness = 1
-   
-
 
 # Initializing the HOG person
 # detector
 hog = cv2.HOGDescriptor()
 hog.setSVMDetector(cv2.HOGDescriptor_getDefaultPeopleDetector())
 
+#threshold for radius search
+threshold = 30
+
 cap = cv2.VideoCapture('people.mp4')
-
-
+notFirst = False
+previous = None
 while cap.isOpened():
-	# Reading the video stream
-	ret, image = cap.read()
-	if ret:
-		image = imutils.resize(image,width=min(600, image.shape[1]))
+    # Reading the video stream
+    ret, image = cap.read()
+    if ret:
+        image = imutils.resize(image, width=min(600, image.shape[1]))
 
-		# Detecting all the regions
-		# in the Image that has a
-		# pedestrians inside it
-		(regions, _) = hog.detectMultiScale(image,
-											winStride=(4, 4),
-											padding=(8, 8),
-											scale=1.05)
+        # Detecting all the regions
+        # in the Image that has a
+        # pedestrians inside it
+        (regions, _) = hog.detectMultiScale(image,
+                                            winStride=(4, 4),
+                                            padding=(8, 8),
+                                            scale=1.05)
 
-		# Drawing the regions in the
-		# Image
-		person = 1
-			
-		for x,y,w,h in regions:
-			cv2.rectangle(image, (x,y), (x+w,y+h), (0,255,0), 2)
-			cv2.circle(image,(x+round(w/2),y+round(h/2)), 2, (0,0,255), 2)
-			cv2.putText(image, f'person {person}', (x+10,y+20), font, 0.5, (0,0,255), 1)
-			person += 1
+        # print(regions)
 
-		# apply non-maxima suppression to the bounding boxes using a
-		# fairly large overlap threshold to try to maintain overlapping
-		# boxes that are still people
-		regions = np.array([[x, y, x + w, y + h] for (x, y, w, h) in regions])
-		pick = NMS.non_max_suppression(regions, overlapThresh=0.65)
-		
-		# draw the final bounding boxes
-		#for (xA, yA, xB, yB) in pick:
-		#cv2.rectangle(image, (xA, yA), (xB, yB), (0, 255, 255), 2)
-	    	
-		cv2.putText(image, 'Status : Detecting ', (20,40), font , 0.6, (255,255,255), 2)
-		cv2.putText(image, f'Total Persons : {person-1}', (20,70), font , 0.6 , (255,255,255), 2)
-		
-		# Showing the output Image
-		cv2.imshow("Image", image)
-		if cv2.waitKey(25) & 0xFF == ord('q'):
-			break
-	else:
-		break
+        # Drawing the regions in the
+        # Image
+
+        # regions = np.array([[x, y, x + w, y + h] for (x, y, w, h) in regions])
+        # filtered_regions = NMS.non_max_suppression(regions, overlapThresh=0.65)
+        i = 0
+        person = 0
+        vectors = []
+        for x, y, w, h in regions:
+            center = (x + round(w / 2), y + round(h / 2))
+            if notFirst:
+                for a, b, c, d in previous:
+                    oldcenter = (a + round(c / 2), b + round(d / 2))
+                    vector = (center[0] - oldcenter[0], center[1] - oldcenter[1])
+                    mag = (vector[0]**2 + vector[1]**2)**0.5
+                    if mag <= threshold:
+                        #we found a point to associate!!
+                        cv2.arrowedLine(image, oldcenter, (center[0] + 3* vector[0], center[1] + 3 * vector[1]), (255, 0, 255), 1)
+                        vectors.append(vector)
+            cv2.rectangle(image, (x, y), (x + w, y + h), (0, 255, 0), 2)
+            cv2.circle(image, center, 2, (0, 0, 255), 2)
+            cv2.putText(image, 'person', (x + 10, y + 20), font, 0.5, (0, 0, 255), 1)
+            person += 1
+        # apply non-maxima suppression to the bounding boxes using a
+        # fairly large overlap threshold to try to maintain overlapping
+        # boxes that are still people
+
+        # draw the final bounding boxes
+        # for (xA, yA, xB, yB) in pick:
+        # cv2.rectangle(image, (xA, yA), (xB, yB), (0, 255, 255), 2)
+
+        cv2.putText(image, 'Status : Detecting ', (20, 40), font, 0.6, (255, 255, 255), 2)
+        # cv2.putText(image, f'Total Persons : {person - 1}', (20, 70), font, 0.6, (255, 255, 255), 2)
+        previous = regions
+        notFirst = True
+        # Showing the output Image
+        cv2.imshow("Image", image)
+        if cv2.waitKey(25) & 0xFF == ord('q'):
+            break
+    else:
+        break
 
 cap.release()
 cv2.destroyAllWindows()
