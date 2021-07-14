@@ -6,6 +6,8 @@ import Box from '@material-ui/core/Box';
 import '@fontsource/karla';
 import { Typography } from '@material-ui/core';
 import { makeStyles } from '@material-ui/core/styles';
+import WarningIcon from '@material-ui/icons/Warning';
+
 import dayjs from 'dayjs';
 import {
   Sparkline,
@@ -30,7 +32,7 @@ const useStyles = makeStyles({
   topBox: {
     height: '300px',
     width: '300px',
-    color: '#3557E4',
+    color: (props) => (!props.overLimit ? '#3557E4' : '#FF4F4F'),
     borderRadius: '15px',
     backgroundColor: 'white',
   },
@@ -61,27 +63,27 @@ const useStyles = makeStyles({
     color: '#5F6582',
   },
 });
-const data = Array(25)
-  .fill()
-  .map(() => Math.random(10));
+
 const server = 'http://localhost:5000';
 const socket = io.connect(server);
 const App = () => {
+  const limit = 30;
   const [count, setCount] = useState(0);
-  const [countData, setCountData] = useState([
-    2, 5, 2, 3, 5, 4, 5, 7, 4, 5, 7, 5, 4,
-  ]);
+  const [countData, setCountData] = useState([]);
+  const [overLimit, setOverLimit] = useState(false);
+
   useEffect(() => {
-    socket.on('newNumber', (res) => {
-      console.log(res.number);
+    const handler = (res) => {
       setCount(count + res.number);
-      const newList = countData.concat(count);
-      setCountData(newList);
-      console.log(count);
+      setCountData([...countData, count]);
+      setOverLimit(count + res.number > limit);
       console.log(countData);
-    });
-  }, [count, countData]);
-  const classes = useStyles();
+    };
+    socket.on('newNumber', handler);
+    return () => socket.off('newNumber', handler);
+  }, [count, countData, overLimit]);
+
+  const classes = useStyles({ overLimit });
   const date = dayjs().format('dddd, MMMM D, YYYY h:mm A');
 
   return (
@@ -192,6 +194,20 @@ const App = () => {
                     className={classes.topBox}
                     alignItems="center"
                   >
+                    <div style={{ position: 'absolute' }}>
+                      {overLimit && (
+                        <div
+                          style={{
+                            position: 'absolute',
+                            top: '-128px',
+                            left: '16px',
+                          }}
+                        >
+                          <WarningIcon styles={{ color: "'#FF4F4F'" }} />
+                        </div>
+                      )}
+                    </div>
+
                     <Grid item xs={12}>
                       <Typography align="center" className={classes.number}>
                         {count}
@@ -213,7 +229,7 @@ const App = () => {
                   >
                     <Grid item xs={12}>
                       <Typography align="center" className={classes.number}>
-                        30
+                        {limit}
                       </Typography>
                       <Typography
                         align="center"
