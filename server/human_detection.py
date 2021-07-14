@@ -9,6 +9,7 @@ import cv2
 import imutils
 import queue
 import non_max_suppression as NMS
+import boundary_detection as BD
 import numpy as np
 
 # Window name in which image is displayed
@@ -24,6 +25,7 @@ hog.setSVMDetector(cv2.HOGDescriptor_getDefaultPeopleDetector())
 
 #threshold for radius search
 threshold = 30
+lockout_counter = 0
 
 cap = cv2.VideoCapture('people.mp4')
 notFirst = False
@@ -34,6 +36,7 @@ while cap.isOpened():
     if ret:
         image = imutils.resize(image, width=min(600, image.shape[1]))
 
+        image = BD.draw_boundaries(image)
         # Detecting all the regions
         # in the Image that has a
         # pedestrians inside it
@@ -52,6 +55,7 @@ while cap.isOpened():
         i = 0
         person = 0
         vectors = []
+        centers = []
         for x, y, w, h in regions:
             center = (x + round(w / 2), y + round(h / 2))
             if notFirst:
@@ -63,6 +67,7 @@ while cap.isOpened():
                         #we found a point to associate!!
                         cv2.arrowedLine(image, oldcenter, (center[0] + 3* vector[0], center[1] + 3 * vector[1]), (255, 0, 255), 1)
                         vectors.append(vector)
+                        centers.append(center)
             cv2.rectangle(image, (x, y), (x + w, y + h), (0, 255, 0), 2)
             cv2.circle(image, center, 2, (0, 0, 255), 2)
             cv2.putText(image, 'person', (x + 10, y + 20), font, 0.5, (0, 0, 255), 1)
@@ -79,6 +84,13 @@ while cap.isOpened():
         # cv2.putText(image, f'Total Persons : {person - 1}', (20, 70), font, 0.6, (255, 255, 255), 2)
         previous = regions
         notFirst = True
+		
+        if (lockout_counter <= 0):
+            crossing = BD.detect_crossing(centers,vectors)
+            if (crossing):
+                lockout_counter = 30
+        lockout_counter -= 1
+		
         # Showing the output Image
         cv2.imshow("Image", image)
         if cv2.waitKey(25) & 0xFF == ord('q'):
