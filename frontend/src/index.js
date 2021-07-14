@@ -3,10 +3,21 @@ import ReactDOM from 'react-dom';
 import './index.css';
 import App from './App';
 import reportWebVitals from './reportWebVitals';
+import { MuiThemeProvider } from '@material-ui/core';
+import { createTheme } from '@material-ui/core/styles';
+import '@fontsource/karla';
+
+const theme = createTheme({
+  typography: {
+    fontFamily: `"Karla", "Roboto", "Helvetica", "Arial", sans-serif`,
+  },
+});
 
 ReactDOM.render(
   <React.StrictMode>
-    <App />
+    <MuiThemeProvider theme={theme}>
+      <App />
+    </MuiThemeProvider>
   </React.StrictMode>,
   document.getElementById('root')
 );
