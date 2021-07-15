@@ -25,7 +25,7 @@ hog.setSVMDetector(cv2.HOGDescriptor_getDefaultPeopleDetector())
 #threshold for radius search
 threshold = 30
 
-cap = cv2.VideoCapture('people.mp4')
+cap = cv2.VideoCapture('walking_lowres.mp4')
 notFirst = False
 previous = None
 while cap.isOpened():
@@ -52,6 +52,7 @@ while cap.isOpened():
         i = 0
         person = 0
         vectors = []
+        centers = []
         for x, y, w, h in regions:
             center = (x + round(w / 2), y + round(h / 2))
             if notFirst:
@@ -61,8 +62,9 @@ while cap.isOpened():
                     mag = (vector[0]**2 + vector[1]**2)**0.5
                     if mag <= threshold:
                         #we found a point to associate!!
-                        cv2.arrowedLine(image, oldcenter, (center[0] + 3* vector[0], center[1] + 3 * vector[1]), (255, 0, 255), 1)
+                        cv2.arrowedLine(image, oldcenter, (center[0] + 3 * vector[0], center[1] + 3 * vector[1]), (255, 0, 255), 1)
                         vectors.append(vector)
+                        centers.append(center)
             cv2.rectangle(image, (x, y), (x + w, y + h), (0, 255, 0), 2)
             cv2.circle(image, center, 2, (0, 0, 255), 2)
             cv2.putText(image, 'person', (x + 10, y + 20), font, 0.5, (0, 0, 255), 1)
