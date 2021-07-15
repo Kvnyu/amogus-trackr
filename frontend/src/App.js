@@ -69,19 +69,19 @@ const socket = io.connect(server);
 const App = () => {
   const limit = 30;
   const [count, setCount] = useState(0);
-  const [countData, setCountData] = useState([]);
+  // const [countData, setCountData] = useState([]);
   const [overLimit, setOverLimit] = useState(false);
 
   useEffect(() => {
     const handler = (res) => {
       setCount(count + res.number);
-      setCountData([...countData, count]);
+      // setCountData([...countData, count]);
       setOverLimit(count + res.number > limit);
-      console.log(countData);
+      // console.log(countData);
     };
     socket.on('newNumber', handler);
     return () => socket.off('newNumber', handler);
-  }, [count, countData, overLimit]);
+  }, [count, overLimit]);
 
   const classes = useStyles({ overLimit });
   const date = dayjs().format('dddd, MMMM D, YYYY h:mm A');
@@ -145,41 +145,7 @@ const App = () => {
                         justifyContent="center"
                         alignItems="center"
                       >
-                        <Sparkline
-                          ariaLabel="A line graph of randomly-generated data"
-                          margin={{ top: 24, right: 64, bottom: 24, left: 64 }}
-                          width={900}
-                          height={250}
-                          data={countData}
-                          valueAccessor={(datum) => datum}
-                        >
-                          {/* this creates a <defs> referenced for fill */}
-                          <PatternLines
-                            id="unique_pattern_id"
-                            height={6}
-                            width={6}
-                            stroke={allColors.blue[6]}
-                            strokeWidth={1}
-                            orientation={['diagonal']}
-                          />
-                          {/* display innerquartiles of the data */}
-                          <BandLine
-                            band="innerquartiles"
-                            fill="url(#unique_pattern_id)"
-                          />
-                          {/* display the median */}
-                          <HorizontalReferenceLine
-                            stroke={allColors.blue[8]}
-                            strokeWidth={1}
-                            strokeDasharray="4 4"
-                            reference="median"
-                          />
-                          {/* Series children are passed the data from the parent Sparkline */}
-                          <LineSeries
-                            showArea={false}
-                            stroke={allColors.blue[7]}
-                          />
-                        </Sparkline>
+                        {/*  */}
                       </Grid>
                     </Grid>
                   </div>
