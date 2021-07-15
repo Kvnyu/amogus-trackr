@@ -75,6 +75,7 @@ const App = () => {
   useEffect(() => {
     const handler = (res) => {
       setCount(count + res.number);
+      console.log(count)
       // setCountData([...countData, count]);
       setOverLimit(count + res.number > limit);
       // console.log(countData);

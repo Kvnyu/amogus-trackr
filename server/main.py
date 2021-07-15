@@ -4,6 +4,7 @@ from flask_cors import CORS
 from random import randint
 from time import sleep
 from threading import Thread, Event
+import eventlet
 import cv2
 import imutils
 import boundary_detection as BD
@@ -19,11 +20,14 @@ app.config['CORS_HEADERS'] = 'Content-Type'
 # Adding CORS to flask App
 CORS(app, resources={r"/*": {"origins": "*"}})
 
-# Connection Socket -- Flask // and adding cors origins
-socketio = SocketIO(app, cors_allowed_origins='*')
+eventlet.monkey_patch()
 
-thread = Thread()
-thread_stop_event = Event()
+# Connection Socket -- Flask // and adding cors origins
+socketio = SocketIO(app, cors_allowed_origins='*', async_mode='eventlet')
+
+thread = None
+thread2 = None
+# thread_stop_event = Event()
 
 
 def randomNumberGenerator():
@@ -31,41 +35,49 @@ def randomNumberGenerator():
     Generate a random number every 1 second and emit to a socketio instance (broadcast)
     Ideally to be run in a separate thread?
     """
+    # socketio.emit('newNumber', {'number': 1})
+    # print("Emitted number!!")
     # infinite loop of magical random numbers
     print("Making random numbers")
-    while not thread_stop_event.isSet():
+    while True:
         number = randint(-5, 5)
         print(number)
         socketio.emit('newNumber', {'number': number})
         socketio.sleep(2)
 
 
-# Connections Event
-@socketio.on('connect')
-def connection():
-    global thread
-    print('Client connected')
+def emitOne():
+    print("EmitOne Run")
+    socketio.emit('newNumber', {'number': 1})
+    socketio.sleep(1)
 
-    # Start the random number generator thread only if the thread has not been started before.
-    if not thread.is_alive():
+
+def emitMinusOne():
+    print("EmitMinusOne Run")
+    socketio.emit('newNumber', {'number': -1})
+    socketio.sleep(1)
+
+
+def emitCrossing(number):
+    global thread2
+
+    if not thread2:
         print("Starting Thread")
-        # thread = socketio.start_background_task(randomNumberGenerator)
-        thread = socketio.start_background_task(playVideo)
-
-
-@socketio.on('disconnect')
-def test_disconnect():
-    print('Client disconnected')
-
-
-@socketio.on('update')
-def handleUpdate(update):
-    emit('')
+        if number == 1:
+            thread2 = Thread(target=emitOne)
+        else:
+            thread2 = Thread(target=emitMinusOne)
+        thread2.daemon = True
+        thread2.start()
+    # if number == 1:
+    #     thread2 = socketio.start_background_task(emitOne)
+    # else:
+    #     thread2 = socketio.start_background_task(emitMinusOne)
 
 
 def playVideo():
+    global thread2
     # Window name in which image is displayed
-
     # font
     font = cv2.FONT_HERSHEY_SIMPLEX
 
@@ -82,10 +94,13 @@ def playVideo():
     count = 0
     notFirst = False
     previous = None
-    while cap.isOpened():
+    framecounter = 0
+    while True:
         # Reading the video stream
         ret, image = cap.read()
         if ret:
+            framecounter += 1
+            # print(framecounter)
             image = imutils.resize(image, width=min(600, image.shape[1]))
 
             image = BD.draw_boundaries(image)
@@ -142,8 +157,11 @@ def playVideo():
                 crossing = BD.detect_crossing(centers, vectors)
                 if (crossing):
                     count += crossing
-                    socketio.emit('newNumber', {'number': crossing})
-                    socketio.sleep(2)
+                    # socketio.emit('newNumber', {'number': crossing})
+                    emitCrossing(crossing)
+                    thread2.join()
+                    # thread2.run()
+                    sleep(0)
                     print("Emitted: {}".format(crossing))
                     lockout_counter = 30
             lockout_counter -= 1
@@ -157,6 +175,33 @@ def playVideo():
 
     cap.release()
     cv2.destroyAllWindows()
+
+
+# Connections Event
+@socketio.on('connect')
+def connection():
+    global thread
+    print('Client connected')
+
+    # Start the random number generator thread only if the thread has not been started before.
+    if thread is None:
+        print("Starting Thread")
+        thread = Thread(target=playVideo)
+        thread.daemon = True
+        thread.start()
+        # thread = socketio.start_background_task(randomNumberGenerator)
+        # thread = socketio.start_background_task(playVideo)
+        # sleep(0)
+
+
+@socketio.on('disconnect')
+def test_disconnect():
+    print('Client disconnected')
+
+
+@socketio.on('update')
+def handleUpdate(update):
+    emit('')
 
 
 if __name__ == '__main__':
