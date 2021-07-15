@@ -32,13 +32,13 @@ def detect_crossing(positions, vectors):
         if ( max_x > x > min_x):
             vector = vectors[counter]
             angle = np.rad2deg(np.arctan2(vector[1],vector[0]));
-            print(angle)
+            # print(angle)
             if (max_angle > angle > min_angle):
-                print("entrant")
-                crossings += 1
-            else:
-                print("exit")
+                # print("exit")
                 crossings -= 1
+            else:
+                # print("entry")
+                crossings += 1
             
         counter += 1
     return crossings
