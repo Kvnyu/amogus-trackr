@@ -3,20 +3,34 @@ import './App.css';
 import io from 'socket.io-client';
 import Grid from '@material-ui/core/Grid/Grid';
 import Box from '@material-ui/core/Box';
-import Card from '@material-ui/core/Card';
+import '@fontsource/karla';
 import { Typography } from '@material-ui/core';
 import { makeStyles } from '@material-ui/core/styles';
 import dayjs from 'dayjs';
+import {
+  Sparkline,
+  LineSeries,
+  HorizontalReferenceLine,
+  BandLine,
+  PatternLines,
+  PointSeries,
+} from '@data-ui/sparkline';
+import { allColors } from '@data-ui/theme';
 
 const useStyles = makeStyles({
   root: {
     padding: '60px',
     backgroundColor: '#FAFAFA',
+    fontFamily: 'Karla',
+    marginLeft: 'auto',
+    marginRight: 'auto',
+    marginTop: '24px',
+    marginBottom: '24px',
   },
   topBox: {
     height: '300px',
     width: '300px',
-    color: '#4159E1',
+    color: '#3557E4',
     borderRadius: '15px',
     backgroundColor: 'white',
   },
@@ -25,7 +39,7 @@ const useStyles = makeStyles({
     width: '300px',
     borderRadius: '15px',
     color: 'white',
-    backgroundColor: '#4159E1',
+    backgroundColor: '#3557E4',
   },
   descriptionBox: {
     backgroundColor: 'white',
@@ -36,31 +50,55 @@ const useStyles = makeStyles({
     backgroundColor: 'white',
     borderRadius: '15px',
   },
+  number: {
+    fontWeight: '720px',
+    fontSize: '104px',
+  },
+  numberDescription: {
+    fontWeight: '600',
+  },
+  grey: {
+    color: '#5F6582',
+  },
 });
-
+const data = Array(25)
+  .fill()
+  .map(() => Math.random(10));
 const server = 'http://localhost:5000';
 const socket = io.connect(server);
-
 const App = () => {
   const [count, setCount] = useState(0);
+  const [countData, setCountData] = useState([
+    2, 5, 2, 3, 5, 4, 5, 7, 4, 5, 7, 5, 4,
+  ]);
   useEffect(() => {
     socket.on('newNumber', (res) => {
       console.log(res.number);
       setCount(count + res.number);
+      const newList = countData.concat(count);
+      setCountData(newList);
+      console.log(count);
+      console.log(countData);
     });
-  }, [count]);
+  }, [count, countData]);
   const classes = useStyles();
   const date = dayjs().format('dddd, MMMM D, YYYY h:mm A');
+
   return (
     <div className={classes.root}>
       <Grid container spacing={2}>
         <Grid item xs={12}>
-          <Typography variant="h3">Customer counting thingo</Typography>
-          <Typography variant="subtitle2">{date}</Typography>
+          <Typography variant="h3" style={{ color: '#13246C' }}>
+            Customer Counter
+          </Typography>
+          <Typography variant="subtitle2" className={classes.grey}>
+            {' '}
+            {date}
+          </Typography>
         </Grid>
         <Grid item xs={12}>
           <Grid container spacing={4}>
-            <Grid item xs={7}>
+            <Grid item xs={9}>
               <Grid container spacing={2} alignItems="stretch">
                 <Grid item xs={12}>
                   <Grid container className={classes.descriptionBox}>
@@ -74,19 +112,79 @@ const App = () => {
                   </Grid>
                 </Grid>
                 <Grid item xs={12}>
-                  <Grid container className={classes.chart}>
-                    <Grid item>
-                      <Box p={4} style={{ height: '100%' }}>
-                        <Typography>
-                          This is where the chart will be{' '}
-                        </Typography>
-                      </Box>
+                  <div style={{ padding: '32px', backgroundColor: 'white' }}>
+                    <Grid container align row>
+                      <Grid item xs={6}>
+                        <Typography>Customer Tracker</Typography>
+                      </Grid>
+                      <Grid item xs={6}>
+                        <Grid container justifyContent="flex-end">
+                          <Grid item>
+                            <div
+                              style={{
+                                backgroundColor: 'rgba(53, 87, 228, 0.17)',
+                                borderRadius: '16px',
+                                paddingTop: '4px',
+                                paddingBottom: '4px',
+                                paddingLeft: '8px',
+                                paddingRight: '8px',
+                              }}
+                            >
+                              <Typography style={{ color: '#3557E4' }}>
+                                Today
+                              </Typography>
+                            </div>
+                          </Grid>
+                        </Grid>
+                      </Grid>
+                      <Grid
+                        item
+                        xs={12}
+                        justifyContent="center"
+                        alignItems="center"
+                      >
+                        <Sparkline
+                          ariaLabel="A line graph of randomly-generated data"
+                          margin={{ top: 24, right: 64, bottom: 24, left: 64 }}
+                          width={900}
+                          height={250}
+                          data={countData}
+                          valueAccessor={(datum) => datum}
+                        >
+                          {/* this creates a <defs> referenced for fill */}
+                          <PatternLines
+                            id="unique_pattern_id"
+                            height={6}
+                            width={6}
+                            stroke={allColors.blue[6]}
+                            strokeWidth={1}
+                            orientation={['diagonal']}
+                          />
+                          {/* display innerquartiles of the data */}
+                          <BandLine
+                            band="innerquartiles"
+                            fill="url(#unique_pattern_id)"
+                          />
+                          {/* display the median */}
+                          <HorizontalReferenceLine
+                            stroke={allColors.blue[8]}
+                            strokeWidth={1}
+                            strokeDasharray="4 4"
+                            reference="median"
+                          />
+                          {/* Series children are passed the data from the parent Sparkline */}
+                          <LineSeries
+                            showArea={false}
+                            stroke={allColors.blue[7]}
+                          />
+                        </Sparkline>
+                      </Grid>
                     </Grid>
-                  </Grid>
+                  </div>
                 </Grid>
               </Grid>
             </Grid>
-            <Grid item xs={5}>
+            <Grid item xs={3}>
               <Grid container spacing={2}>
                 <Grid item xs={12}>
                   <Grid
@@ -95,10 +193,13 @@ const App = () => {
                     alignItems="center"
                   >
                     <Grid item xs={12}>
-                      <Typography variant="h1" align="center">
+                      <Typography align="center" className={classes.number}>
                         {count}
                       </Typography>
-                      <Typography variant="subtitle1" align="center">
+                      <Typography
+                        align="center"
+                        className={classes.numberDescription}
+                      >
                         Current customers
                       </Typography>
                     </Grid>
@@ -111,10 +212,13 @@ const App = () => {
                     alignItems="center"
                   >
                     <Grid item xs={12}>
-                      <Typography variant="h1" align="center">
+                      <Typography align="center" className={classes.number}>
                         30
                       </Typography>
-                      <Typography variant="subtitle1" align="center">
+                      <Typography
+                        align="center"
+                        className={classes.numberDescription}
+                      >
                         Maximum capacity
                       </Typography>
                     </Grid>

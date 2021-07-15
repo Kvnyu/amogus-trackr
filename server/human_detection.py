@@ -9,6 +9,7 @@ import cv2
 import imutils
 import queue
 import non_max_suppression as NMS
+import boundary_detection as BD
 import numpy as np
 
 # Window name in which image is displayed
@@ -24,6 +25,7 @@ hog.setSVMDetector(cv2.HOGDescriptor_getDefaultPeopleDetector())
 
 #threshold for radius search
 threshold = 30
+lockout_counter = 0
 
 cap = cv2.VideoCapture('walking_lowres.mp4')
 notFirst = False
@@ -34,6 +36,7 @@ while cap.isOpened():
     if ret:
         image = imutils.resize(image, width=min(600, image.shape[1]))
 
+        image = BD.draw_boundaries(image)
         # Detecting all the regions
         # in the Image that has a
         # pedestrians inside it
@@ -81,6 +84,13 @@ while cap.isOpened():
         # cv2.putText(image, f'Total Persons : {person - 1}', (20, 70), font, 0.6, (255, 255, 255), 2)
         previous = regions
         notFirst = True
+		
+        if (lockout_counter <= 0):
+            crossing = BD.detect_crossing(centers,vectors)
+            if (crossing):
+                lockout_counter = 30
+        lockout_counter -= 1
+		
         # Showing the output Image
         cv2.imshow("Image", image)
         if cv2.waitKey(25) & 0xFF == ord('q'):
